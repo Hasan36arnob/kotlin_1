@@ -18,7 +18,7 @@ class SplitCalculatorTest {
 
         val result = SplitCalculator.calculate(input).getOrThrow()
 
-        assertEquals(108.50, result.total - result.tipAmount, 0.001)
+        assertEquals(8.50, result.taxAmount, 0.001)
         assertEquals(16.28, result.tipAmount, 0.001)
         assertEquals(124.78, result.total, 0.001)
         assertEquals(41.59, result.perPerson, 0.001)
