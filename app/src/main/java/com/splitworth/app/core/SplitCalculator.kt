@@ -1,7 +1,8 @@
 package com.splitworth.app.core
 
+import java.math.BigDecimal
+import java.math.RoundingMode
 import kotlin.math.ceil
-import kotlin.math.round
 
 data class SplitInput(
     val subtotal: Double,
@@ -25,29 +26,36 @@ object SplitCalculator {
         if (input.tipPercent < 0) return Result.failure(IllegalArgumentException("Tip must be 0 or higher."))
         if (input.people <= 0) return Result.failure(IllegalArgumentException("People must be at least 1."))
 
-        val taxAmount = input.subtotal * (input.taxPercent / 100.0)
-        val tipBase = input.subtotal + taxAmount
-        val tipAmount = tipBase * (input.tipPercent / 100.0)
-        val total = input.subtotal + taxAmount + tipAmount
+        val subtotal = input.subtotal.bd()
+        val taxPercent = input.taxPercent.bd()
+        val tipPercent = input.tipPercent.bd()
+        val hundred = BigDecimal("100")
 
-        val basePerPerson = total / input.people
+        val taxAmount = subtotal.multiply(taxPercent).divide(hundred, 10, RoundingMode.HALF_UP)
+        val tipBase = subtotal.add(taxAmount)
+        val tipAmount = tipBase.multiply(tipPercent).divide(hundred, 10, RoundingMode.HALF_UP)
+        val total = subtotal.add(taxAmount).add(tipAmount)
+
+        val basePerPerson = total.divide(input.people.bd(), 10, RoundingMode.HALF_UP)
         val perPerson = if (input.roundUpPerPerson) {
-            ceil(basePerPerson * 100.0) / 100.0
+            ceil(basePerPerson.toDouble() * 100.0) / 100.0
         } else {
-            round2(basePerPerson)
+            round2(basePerPerson.toDouble())
         }
 
         return Result.success(
             SplitResult(
-                total = round2(total),
+                total = round2(total.toDouble()),
                 perPerson = perPerson,
-                taxAmount = round2(taxAmount),
-                tipAmount = round2(tipAmount)
+                taxAmount = round2(taxAmount.toDouble()),
+                tipAmount = round2(tipAmount.toDouble())
             )
         )
     }
 
     fun formatCurrency(value: Double): String = "%.2f".format(round2(value))
 
-    private fun round2(value: Double): Double = round(value * 100.0) / 100.0
+    private fun round2(value: Double): Double = value.bd().setScale(2, RoundingMode.HALF_UP).toDouble()
+    private fun Double.bd(): BigDecimal = BigDecimal.valueOf(this)
+    private fun Int.bd(): BigDecimal = BigDecimal.valueOf(this.toLong())
 }
